@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Patent Landscape — {{ technology }}</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0d1117; color: #c9d1d9; line-height: 1.6; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+  .hero { background: linear-gradient(135deg, #161b22 0%, #1a2332 100%); border-radius: 12px; padding: 2rem; margin-bottom: 2rem; }
+  .hero h1 { font-size: 1.8rem; color: #58a6ff; margin-bottom: 1rem; }
+  .stat-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 1.5rem; }
+  .stat-tile { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 1.2rem; text-align: center; }
+  .stat-tile .value { font-size: 2rem; font-weight: 700; color: #58a6ff; }
+  .stat-tile .label { font-size: 0.85rem; color: #8b949e; margin-top: 0.3rem; }
+  .section { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
+  .section h2 { font-size: 1.3rem; color: #58a6ff; margin-bottom: 1rem; border-bottom: 1px solid #30363d; padding-bottom: 0.5rem; }
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+  th, td { text-align: left; padding: 0.6rem 0.8rem; border-bottom: 1px solid #30363d; font-size: 0.9rem; }
+  th { color: #8b949e; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  tr:hover { background: #1a2332; }
+  .bar { display: inline-block; height: 20px; background: linear-gradient(90deg, #1f6feb, #58a6ff); border-radius: 4px; vertical-align: middle; }
+  .filter-bar { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+  .filter-pill { padding: 0.3rem 0.8rem; border-radius: 16px; border: 1px solid #30363d; background: #161b22; cursor: pointer; font-size: 0.85rem; color: #8b949e; transition: all 0.2s; }
+  .filter-pill.active { background: #1f6feb; color: #fff; border-color: #1f6feb; }
+  .filter-pill:hover { border-color: #58a6ff; }
+  .chart-placeholder { background: #0d1117; border: 1px dashed #30363d; border-radius: 8px; padding: 3rem; text-align: center; color: #8b949e; margin: 1rem 0; }
+  .caveat { background: #1a1209; border: 1px solid #9e6a03; border-radius: 8px; padding: 0.8rem 1rem; margin: 0.5rem 0; font-size: 0.85rem; color: #d29922; }
+  .methodology { font-size: 0.85rem; color: #8b949e; }
+  .methodology code { background: #0d1117; padding: 0.2rem 0.4rem; border-radius: 4px; color: #58a6ff; font-size: 0.85rem; }
+  .export-btn { float: right; padding: 0.3rem 0.6rem; border-radius: 6px; border: 1px solid #30363d; background: #21262d; color: #8b949e; cursor: pointer; font-size: 0.75rem; }
+  .export-btn:hover { border-color: #58a6ff; color: #58a6ff; }
+  .dropdown { padding: 0.4rem 0.8rem; border-radius: 6px; border: 1px solid #30363d; background: #21262d; color: #c9d1d9; font-size: 0.85rem; margin-bottom: 1rem; }
+  .footer { text-align: center; color: #484f58; font-size: 0.8rem; padding: 2rem 0; border-top: 1px solid #30363d; }
+  a { color: #58a6ff; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="container">
+  <!-- Hero -->
+  <div class="hero">
+    <h1>Patent Landscape — {{ technology }}</h1>
+    <p style="color: #8b949e;">{{ headline }}</p>
+    <div class="stat-tiles">
+      <div class="stat-tile"><div class="value">{{ family_count }}</div><div class="label">Patent Families</div></div>
+      <div class="stat-tile"><div class="value">{{ applicant_count }}</div><div class="label">Distinct Applicants</div></div>
+      <div class="stat-tile"><div class="value">{{ jurisdiction_count }}</div><div class="label">Jurisdictions</div></div>
+      <div class="stat-tile"><div class="value">{{ peak_year }}</div><div class="label">Peak Filing Year</div></div>
+    </div>
+  </div>
+
+  <!-- Filter Bar -->
+  <div class="filter-bar">
+    <span class="filter-pill active" onclick="filterDocs('all')">All</span>
+    <span class="filter-pill" onclick="filterDocs('patent_grant')">Granted</span>
+    <span class="filter-pill" onclick="filterDocs('patent_application')">Applications</span>
+    <span class="filter-pill" onclick="filterDocs('utility_model')">Utility</span>
+    <span class="filter-pill" onclick="filterDocs('design')">Design</span>
+  </div>
+
+  <!-- Applicant Leaderboard -->
+  <div class="section">
+    <h2>Applicant Leaderboard <button class="export-btn" onclick="exportCSV()">CSV</button></h2>
+    <table id="applicants">
+      <thead><tr><th>Rank</th><th>Applicant</th><th>Families</th><th>Share</th><th></th></tr></thead>
+      <tbody>
+        {% for a in applicants %}
+        <tr><td>{{ loop.index }}</td><td>{{ a.name }}</td><td>{{ a.families }}</td><td>{{ a.share }}%</td><td><div class="bar" style="width: {{ a.share * 3 }}px;"></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Filing Trends -->
+  <div class="section">
+    <h2>Filing Trends</h2>
+    <div class="chart-placeholder">[Stacked area chart: aggregate + top 5 jurisdictions]<br>Application date (not publication date)</div>
+    <table>
+      <thead><tr><th>Year</th><th>Filings</th><th>Trend</th></tr></thead>
+      <tbody>
+        {% for y in trends %}
+        <tr><td>{{ y.year }}</td><td>{{ y.count }}</td><td>{{ y.direction }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if trailing_year_excluded %}
+    <div class="caveat">⚠️ {{ trailing_year }} excluded as incomplete — snapshot or publication lag.</div>
+    {% endif %}
+  </div>
+
+  <!-- Technology Breakdown -->
+  <div class="section">
+    <h2>Technology Breakdown</h2>
+    <table>
+      <thead><tr><th>CPC Subclass</th><th>Plain English</th><th>Families</th></tr></thead>
+      <tbody>
+        {% for c in cpc_breakdown %}
+        <tr><td><code>{{ c.code }}</code></td><td>{{ c.plain }}</td><td>{{ c.families }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Notable Patents -->
+  <div class="section">
+    <h2>Notable Patents Spotlight</h2>
+    <select class="dropdown" id="spotlight-view" onchange="switchSpotlight()">
+      <option value="recent">Most Recent Filings</option>
+      <option value="top">Top Applicants' Newest</option>
+      <option value="foundational">Foundational Patents</option>
+      <option value="cross">Cross-Disciplinary</option>
+    </select>
+    <table id="spotlight">
+      <thead><tr><th>Patent #</th><th>Title</th><th>Assignee</th><th>Filed</th><th>Link</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- Methodology -->
+  <div class="section methodology">
+    <h2>Methodology</h2>
+    <p><strong>Query:</strong> <code>{{ query }}</code></p>
+    <p><strong>Data source:</strong> {{ data_source }}</p>
+    <p><strong>Date range:</strong> {{ date_start }} to {{ date_end }}</p>
+    <p><strong>Effective span:</strong> {{ effective_span }}</p>
+    <p><strong>Document types:</strong> {{ doc_types }}</p>
+    {% if row_cap %}<div class="caveat">Row-cap truncation: results limited to {{ row_cap }} rows.</div>{% endif %}
+    {% if snapshot_lag %}<div class="caveat">Snapshot freshness: data may lag by {{ snapshot_lag }} days.</div>{% endif %}
+    {% for m in merges %}
+    <p><strong>Name merge:</strong> {{ m }}</p>
+    {% endfor %}
+  </div>
+
+  <div class="footer">
+    Generated by patent-intel | {{ generation_date }} | Mode A (google-patents)
+  </div>
+</div>
+
+<script>
+function filterDocs(type) {
+  document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+  // Client-side filter logic would go here
+}
+
+function switchSpotlight() {
+  const view = document.getElementById('spotlight-view').value;
+  // Spotlight view switching logic would go here
+}
+
+function exportCSV() {
+  // CSV export logic would go here
+  alert('CSV export — implement in production');
+}
+</script>
+</body>
+</html>
