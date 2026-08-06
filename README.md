@@ -14,6 +14,17 @@ analysis, and landscape visualization.
 - **Name normalization** — 100+ legal suffixes, multi-language
 - **Full date precision** — YYYYMMDD across all commands
 
+## Extension Modules (scripts/patenter_ext/)
+
+| Module | Capability |
+|--------|-----------|
+| `design_around.py` | Claim-gap & design-around analysis (element parsing, white-space flags, Omit/Replace/Reorganize/Combine strategies) |
+| `watch_brief.py` | Competitor IP watch (delta detection, HTML/MD brief, persistent state, cron-friendly) |
+| `docx_export.py` | Export report context to a formatted `.docx` memo (needs `python-docx`) |
+| `google_patents.py` | Fetch hardening — robust xhr fetch with retries, dedup, page-scrape fallback on 503 |
+| `cache.py` | Fetch hardening — SQLite/FTS5 cache for patents + embeddings |
+| `bigquery_patents.py` | Optional BigQuery bulk landscape (needs GCP creds; graceful no-op) |
+
 ## Quick Start
 
 ```bash
@@ -66,7 +77,8 @@ patenter/
 ├── templates/            # 5 output templates
 ├── agents/               # 3 agent definitions
 ├── scripts/patenter.py   # CLI + library
-└── tests/                # 45 smoke tests
+├── scripts/patenter_ext/ # design-around, competitor watch, DOCX export, fetch hardening, BigQuery modules
+└── tests/                # smoke tests
 ```
 
 ## License

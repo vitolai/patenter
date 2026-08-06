@@ -127,6 +127,21 @@ Interactive self-contained HTML report (Jinja2-rendered):
 - Notable patents spotlight (4 views)
 - Export: PNG, SVG, CSV, PDF
 
+## Extension Modules (scripts/patenter_ext/)
+
+Additional capability modules bundled under `scripts/patenter_ext/`:
+
+| Module | Purpose |
+|--------|---------|
+| `design_around.py` | **Claim-gap & design-around analysis** — parse independent claims into elements, classify kind (structural/functional/quantifiable/mixed), flag unclaimed white-space dimensions, generate Omit/Replace/Reorganize/Combine alternatives |
+| `watch_brief.py` | **Competitor IP watch** — delta detection vs prior run, HTML/MD brief generation, persistent state (cron-friendly) |
+| `docx_export.py` | **DOCX export** — export report context (JSON) to a formatted `.docx` memo |
+| `google_patents.py` | **Fetch hardening** — robust Google Patents xhr fetch with retries, dedup, page-scrape fallback (detail endpoint rate-limit 503 handling) |
+| `cache.py` | **Fetch hardening** — SQLite/FTS5 cache for fetched patents + embeddings (avoids re-fetch/re-embed per run) |
+| `bigquery_patents.py` | **BigQuery** — optional bulk landscape queries over Google Patents Public Datasets (requires GCP credentials); graceful no-op if absent |
+
+These extend the CLI workflow; the existing `patenter.py` CLI remains the entry point, with these modules importable for programmatic or cron-driven use.
+
 ## Intake Protocol
 
 Before any analysis, confirm:
@@ -162,6 +177,11 @@ Always consult a qualified patent attorney before filing or licensing decisions.
 - `references/portfolio-triage.md` — Triage matrix specification
 - `references/cpc-translation.md` — CPC → plain English map (250+ classes)
 - `references/name-normalization.md` — Applicant name normalization rules
+
+## Extension Dependencies
+
+- `docx_export.py` requires `python-docx`
+- `bigquery_patents.py` requires `google-cloud-bigquery` (optional; module no-ops without it)
 
 ## Templates
 

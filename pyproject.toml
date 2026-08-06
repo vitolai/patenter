@@ -5,12 +5,13 @@ build-backend = "setuptools.backends._legacy:_Backend"
 [project]
 name = "patenter"
 version = "0.2.0"
-description = "Unified patent intelligence — research, summary, comparison, core patent finding, portfolio study"
+description = "Unified patent intelligence — research, summary, comparison, core patent finding, portfolio study, FTO, landscape, design-around, competitor watch"
 license = {text = "MIT"}
 requires-python = ">=3.9"
 authors = [{name = "VLw"}]
 dependencies = [
     "jinja2>=3.1",
+    "python-docx>=1.1",
 ]
 
 [project.scripts]
