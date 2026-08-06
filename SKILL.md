@@ -177,6 +177,7 @@ Always consult a qualified patent attorney before filing or licensing decisions.
 - `references/portfolio-triage.md` — Triage matrix specification
 - `references/cpc-translation.md` — CPC → plain English map (250+ classes)
 - `references/name-normalization.md` — Applicant name normalization rules
+- `references/bigquery-guide.md` — Google Patents BigQuery setup + usage (ADC auth, cost control)
 
 ## Extension Dependencies
 
