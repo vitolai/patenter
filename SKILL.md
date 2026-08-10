@@ -40,8 +40,15 @@ status, figures, PDF links.
 Enables: landscape visualization, portfolio comparison, core patent finding
 with structured scoring.
 
-**Mode A+ (future)**: Google Patents Public Datasets on BigQuery for bulk
-analysis — requires GCP credentials. Kept open as future enhancement.
+**Mode A+ (BigQuery / "BQ")**: Google Patents Public Datasets on BigQuery for
+bulk landscape analysis — requires GCP credentials. **NOT a default mode.**
+
+> **BQ policy (MANDATORY)**: The agent runs **Mode A / B / C by default** and
+> **NEVER invokes BigQuery unless the user explicitly says "BQ"** (or
+> "BigQuery"). BigQuery is a heavy, cost-billed opt-in — see the cost note
+> below. When the user does request BQ, it runs only on the node that has GCP
+> credentials + the `google-cloud-bigquery` library installed (deployment
+> detail; see the private skill-fleet template for the exact node).
 
 ### Mode B — `web-search-api` (API-powered broad research)
 
@@ -66,6 +73,21 @@ Limitations: same as Mode B — no visualizations or structured analytics.
 1. **Mode A** (default) — structured data, enables all features
 2. **Mode B** — when Mode A unavailable or for supplementary search
 3. **Mode C** — fallback when no API keys available
+4. **BQ (BigQuery)** — **ONLY on explicit user request** ("BQ"). Never default.
+
+## BigQuery Cost Note (2026-08-10)
+
+- The Google Patents public tables are **unpartitioned (~170M rows)** — every
+  query scans the **full table (~34 GB)** regardless of filters.
+- Each BQ query burns ~34 GB of the **1 TB/month free quota** (~29 queries
+  free), then **~$0.17/query** over quota.
+- The module's default cost ceiling is **45 GB** (raised from 20 GB) so queries
+  actually run; it fails instead of over-billing if a query would exceed it.
+- **Deployment**: GCP credentials + `google-cloud-bigquery` are installed only
+  on the node(s) that opt in (see the private skill-fleet template for the
+  exact node/paths). Other nodes no-op gracefully.
+- Use BQ only for bulk/analytical landscape scans the free xhr endpoint can't
+  do. For typical lookups, Mode A is free and sufficient.
 
 ## Sub-Skills
 

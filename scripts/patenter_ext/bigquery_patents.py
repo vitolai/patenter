@@ -10,11 +10,23 @@ xhr endpoint cannot serve. Design follows LeonardHope's
 
 CRITICAL design stance (keeps patenter "lite"):
   - This is OPTIONAL and OFF by default. patenter's default Mode A (xhr) still
-    needs zero infra. BigQuery is an explicit opt-in via env/flag.
+    needs zero infra. BigQuery is an explicit opt-in via env/flag AND only
+    runs when the user explicitly requests "BQ" (see SKILL.md).
   - Unbounded queries are rejected (must supply CPC prefixes + date range)
     to prevent runaway cost — exactly like LeonardHope's `fetch_landscape`.
   - Fails gracefully to "BigQuery not available" if deps/auth missing, so the
     rest of the CLI keeps working.
+
+COST REALITY (2026-08-10, verified):
+  - The Google Patents public tables (`patents.publications` and
+    `google_patents_research.publications_*`) are UNPARTITIONED and
+    UNCLUSTERED (~170M rows). Every query scans the FULL table (~34 GB)
+    regardless of date/CPC filters — there is NO partition pruning.
+  - Default `max_bytes_scanned` is therefore 45 GB (raised from 20 GB) so
+    queries actually run. Each query scans ~34-42 GB of the 1 TB/month free
+    quota (~24-29 queries/month free), then ~$0.17-0.21/query over quota.
+  - Deployment is opt-in per node (GCP creds + lib installed); see the
+    private skill-fleet template for the exact node/paths.
 
 Env:
   PATENTER_BQ=1                 # enable BigQuery mode
@@ -90,7 +102,7 @@ def _int_date_to_iso(v) -> str:
 
 def fetch_landscape(cpc_prefixes: list[str], date_from: str, date_to: str,
                     countries: list[str] | None = None, row_limit: int = 5000,
-                    max_bytes_scanned: int = 20_000_000_000) -> dict:
+                    max_bytes_scanned: int = 45_000_000_000) -> dict:
     """Run a cost-gated landscape query against Google Patents BigQuery.
 
     Returns a dict with records + metadata, or an error dict if BigQuery
@@ -169,7 +181,7 @@ if __name__ == "__main__":
     ap.add_argument("--date-to", required=True, help="YYYY-MM-DD")
     ap.add_argument("--countries", default="", help="Comma-separated country codes")
     ap.add_argument("--row-limit", type=int, default=5000)
-    ap.add_argument("--max-bytes", type=int, default=20_000_000_000)
+    ap.add_argument("--max-bytes", type=int, default=45_000_000_000)
     ap.add_argument("--output", default="", help="Output JSON path")
     args = ap.parse_args()
 
