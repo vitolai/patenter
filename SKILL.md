@@ -46,9 +46,10 @@ bulk landscape analysis — requires GCP credentials. **NOT a default mode.**
 > **BQ policy (MANDATORY)**: The agent runs **Mode A / B / C by default** and
 > **NEVER invokes BigQuery unless the user explicitly says "BQ"** (or
 > "BigQuery"). BigQuery is a heavy, cost-billed opt-in — see the cost note
-> below. When the user does request BQ, it runs only on the node that has GCP
-> credentials + the `google-cloud-bigquery` library installed (deployment
-> detail; see the private skill-fleet template for the exact node).
+> below. When the user does request BQ, it runs only on a node that has GCP
+> credentials + the `google-cloud-bigquery` library installed. This is an
+> **opt-in per node** — set up once on any node the user enables; NOT a
+> per-node template concern.
 
 ### Mode B — `web-search-api` (API-powered broad research)
 
@@ -83,9 +84,10 @@ Limitations: same as Mode B — no visualizations or structured analytics.
   free), then **~$0.17/query** over quota.
 - The module's default cost ceiling is **45 GB** (raised from 20 GB) so queries
   actually run; it fails instead of over-billing if a query would exceed it.
-- **Deployment**: GCP credentials + `google-cloud-bigquery` are installed only
-  on the node(s) that opt in (see the private skill-fleet template for the
-  exact node/paths). Other nodes no-op gracefully.
+- **Deployment (opt-in per node)**: GCP credentials + the
+  `google-cloud-bigquery` library are installed only on node(s) that opt in.
+  Any node may be enabled at the user's discretion. Other nodes no-op
+  gracefully. This is NOT a per-node template concern.
 - Use BQ only for bulk/analytical landscape scans the free xhr endpoint can't
   do. For typical lookups, Mode A is free and sufficient.
 
