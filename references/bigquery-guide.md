@@ -8,6 +8,18 @@ cannot serve at scale.
 > (Application Default Credentials / ADC)**, not a single API key string.
 > Follow the setup below — it's a one-time ~5 min process.
 
+> **GCP-hosted nodes (e.g. gcpn) — different auth path (2026-08-10, verified):**
+> If the node is itself a GCP VM, ADC comes from the **metadata service
+> account** — you do NOT run `gcloud auth application-default login`.
+> BUT the VM's **OAuth scopes must include BigQuery**
+> (`https://www.googleapis.com/auth/bigquery`). The default compute scopes
+> (devstorage.read_only, logging.write, monitoring.write, etc.) do NOT include
+> BigQuery → you get `403 ACCESS_TOKEN_SCOPE_INSUFFICIENT`. To fix, recreate
+> the VM with the `bigquery` scope, or use a service-account key via
+> `GOOGLE_APPLICATION_CREDENTIALS`. Also, `gcloud` is usually pre-installed
+> via apt on GCP VMs (just not on PATH — use
+> `/usr/lib/google-cloud-sdk/bin/gcloud`).
+
 ---
 
 ## 1. Prerequisites (one-time setup)
