@@ -21,19 +21,30 @@ cannot serve at scale.
    sudo apt-get install google-cloud-cli
    # or via the install script: https://cloud.google.com/sdk/docs/install
    ```
-3. **Python client library**:
+3. **Python client library** (use a **venv** — Debian 12's pip is
+   externally-managed / PEP 668 and blocks system-wide installs):
    ```bash
-   pip install google-cloud-bigquery
+   cd ~/repos/skills/patenter
+   python3 -m venv .venv
+   .venv/bin/pip install google-cloud-bigquery
    ```
+   Then run patenter's BQ module with `.venv/bin/python` (not bare `python3`).
 4. **Authenticate (ADC)** — this is the step that replaces an "API key":
    ```bash
    gcloud auth application-default login
    ```
    Opens a browser → sign in with the GCP account that owns the project.
+5. **Set the project** (ADC login alone leaves it unset):
+   ```bash
+   gcloud config set project <your-gcp-project>
+   ```
 
-> The BigQuery Public Dataset (`patents-public-data.patents.publications`) is
-> **free to query** up to a monthly quota. You only pay if you exceed the
-> free-tier scanning bytes (see Cost Control below).
+> ⚠️ **Cost reality (2026-08-10, verified)**: The Google Patents public tables
+> (`patents.publications` and `google_patents_research.publications_*`) are
+> **UNPARTITIONED (~170M rows)** — every query scans the **full table
+> (~34-42 GB)** regardless of date/CPC filters. So each query burns ~34-42 GB
+> of the **1 TB/month free quota** (~24-29 queries free), then ~$0.17-0.21/query
+> over quota. It is NOT "a few GB" — budget accordingly.
 
 ---
 
@@ -57,7 +68,8 @@ export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
 
 ### CLI (standalone)
 ```bash
-python3 -m modules.bigquery \
+cd ~/repos/skills/patenter
+.venv/bin/python scripts/patenter_ext/bigquery_patents.py \
   --cpc G06N,G06V \
   --date-from 2024-01-01 \
   --date-to 2024-12-31 \
@@ -90,7 +102,7 @@ print(res["row_count"], "records")
 | `--date-to` | ✅ | `YYYY-MM-DD` filing date end |
 | `--countries` | ❌ | Comma-separated country codes (`US,EP,CN,...`) |
 | `--row-limit` | ❌ | Default `5000` |
-| `--max-bytes` | ❌ | Cost ceiling in bytes; default `20_000_000_000` (20 GB) |
+| `--max-bytes` | ❌ | Cost ceiling in bytes; default `45_000_000_000` (45 GB) |
 
 ---
 
@@ -99,12 +111,15 @@ print(res["row_count"], "records")
 BigQuery bills by **bytes scanned**, not rows returned. This module:
 
 - **Rejects unbounded queries** — you MUST supply CPC prefixes + date range.
-- Sets `maximum_bytes_billed=20GB` by default → the query **fails instead of
-  racking up cost** if it would scan more than 20 GB.
+- Sets `maximum_bytes_billed=45GB` by default → the query **fails instead of
+  racking up cost** if it would scan more than 45 GB.
 - Raises/lowers the ceiling with `--max-bytes`.
 
-A typical CPC-prefixed, date-bounded landscape scan is a few GB at most and
-**falls inside the free monthly quota** for most use.
+> ⚠️ Because the patents table is **unpartitioned**, even a narrow
+> CPC-prefixed, date-bounded query scans the **full table (~34-42 GB)**. The
+> 45 GB default ceiling is set so real queries actually run. Each query burns
+> ~34-42 GB of the 1 TB/month free quota (~24-29 queries free), then
+> ~$0.17-0.21/query over quota.
 
 ---
 
@@ -113,7 +128,8 @@ A typical CPC-prefixed, date-bounded landscape scan is a few GB at most and
 For each patent record:
 - `publication_number`, `country_code`, `kind_code`
 - `filing_date`, `priority_date`, `family_id`
-- `title` (English)
+- `title` (English — from `title_localized`, an ARRAY of STRUCTs; the module
+  extracts the `en` text)
 - `assignees` (harmonized names)
 - `cpc_codes` (list)
 
@@ -126,10 +142,10 @@ the rest of the CLI**:
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| `BigQuery disabled or deps missing` | `PATENTER_BQ` not `1` OR lib missing | `export PATENTER_BQ=1` + `pip install google-cloud-bigquery` |
+| `BigQuery disabled or deps missing` | `PATENTER_BQ` not `1` OR lib missing | `export PATENTER_BQ=1` + install lib in the venv (`.venv/bin/pip install google-cloud-bigquery`) |
 | `DefaultCredentialsError` | No ADC auth | `gcloud auth application-default login` |
-| `Project not found / permission denied` | Wrong project / no BigQuery API | Set `GOOGLE_CLOUD_PROJECT`, enable BigQuery API, check IAM |
-| `Query exceeded limit` | Would scan > `--max-bytes` | Narrow CPC/date, or raise `--max-bytes` |
+| `Project not found / permission denied` | Wrong project / no BigQuery API | `gcloud config set project <proj>` + enable BigQuery API, check IAM |
+| `Query exceeded limit` | Would scan > `--max-bytes` (unpartitioned table needs ~34-42 GB) | Narrow CPC/date, or raise `--max-bytes` above 45 GB |
 
 ---
 
