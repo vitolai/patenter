@@ -39,11 +39,15 @@ def google_patents_url(query, jurisdiction="", date_from="", date_to="", doc_typ
         base += f"&type={doc_type}"
     return base
 
-def google_patents_xhr_url(query, jurisdiction="", date_from="", date_to="", doc_type="", page=0):
+def google_patents_xhr_url(query, jurisdiction="", date_from="", date_to="", doc_type="", page=0, inventor=""):
     """Google Patents xhr JSON endpoint (Mode A, structured API).
 
     Returns structured JSON without authentication. Used by web_fetch.
+    If inventor is given, builds an inventor:"<First Last>" query instead of
+    the raw query (assignee facet is unreliable — see Pitfall 3).
     """
+    if inventor:
+        query = f'inventor:"{inventor}"'
     params = [f"q={quote_plus(query)}"]
     if jurisdiction:
         params.append(f"country={jurisdiction}")
@@ -157,14 +161,14 @@ def render_jinja2(template_name, context, output_path=None):
         print(f"✅ Rendered: {output_path}")
     return rendered
 
-def fetch_xhr_page(query, date_from="", date_to="", page=0):
+def fetch_xhr_page(query, date_from="", date_to="", page=0, inventor=""):
     """Fetch one page of Google Patents xhr JSON results (Mode A pagination).
 
     Returns parsed JSON dict. Requires requests library or falls back to urllib.
     """
     import urllib.request
 
-    url = google_patents_xhr_url(query, "", date_from, date_to, "", page)
+    url = google_patents_xhr_url(query, "", date_from, date_to, "", page, inventor)
     headers = {
         'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'application/json, text/plain, */*',
@@ -178,7 +182,7 @@ def fetch_xhr_page(query, date_from="", date_to="", page=0):
         print(f"⚠️ xhr fetch failed (page {page}): {e}")
         return {"results": {"total_num_results": 0, "cluster": []}}
 
-def fetch_all_xhr_pages(query, date_from="", date_to="", max_pages=10):
+def fetch_all_xhr_pages(query, date_from="", date_to="", max_pages=10, inventor=""):
     """Fetch multiple pages of Google Patents xhr results.
 
     Returns list of patent dicts with total count.
@@ -188,7 +192,7 @@ def fetch_all_xhr_pages(query, date_from="", date_to="", max_pages=10):
     total_pages = 0
 
     for page in range(max_pages):
-        data = fetch_xhr_page(query, date_from, date_to, page)
+        data = fetch_xhr_page(query, date_from, date_to, page, inventor)
         results = data.get("results", {})
         if page == 0:
             total = results.get("total_num_results", 0)
@@ -346,9 +350,11 @@ def cmd_fetch_xhr(args):
     """Fetch patent data from Google Patents xhr endpoint with pagination."""
     print(f"[patenter] Fetch xhr — Mode A pagination")
     print(f"  Query: {args.query}")
+    if args.inventor:
+        print(f"  Inventor: {args.inventor} (builds inventor:\"{args.inventor}\" query)")
     print(f"  Date range: {args.date_from} to {args.date_to}")
     print(f"  Max pages: {args.max_pages}")
-    result = fetch_all_xhr_pages(args.query, args.date_from, args.date_to, args.max_pages)
+    result = fetch_all_xhr_pages(args.query, args.date_from, args.date_to, args.max_pages, args.inventor)
     print(f"  Fetched: {len(result['patents'])} patents from {result['pages']} pages (total: {result['total']})")
     if args.output:
         with open(args.output, "w") as f:
@@ -447,6 +453,7 @@ def main():
     # fetch-xhr (pagination)
     p = subparsers.add_parser("fetch-xhr", help="Fetch patent data from Google Patents xhr (Mode A)")
     p.add_argument("--query", required=True, help='Search query (e.g. assignee:"Example Corporation")')
+    p.add_argument("--inventor", default="", help='Inventor name (e.g. "<Founder Name>") — builds inventor:"<name>" query (assignee facet is unreliable)')
     p.add_argument("--date-from", default="", help="Start date YYYYMMDD")
     p.add_argument("--date-to", default="", help="End date YYYYMMDD")
     p.add_argument("--max-pages", type=int, default=10, help="Max pages to fetch")

@@ -36,7 +36,10 @@
 - Rank: filer map + investment hotspots
 
 ### Diligence
-- Assignee-specific query: portfolio scope
+- Assignee-specific query: portfolio scope — **but verify by inventor sweep too.**
+  Google Patents' `assignee` facet is unreliable: quoted `assignee:"X"` can
+  return 0 and unquoted can return noise, so confirm with
+  `inventor:"<founder>"` enumeration (see fetching-google-patents.md, Pitfall 3).
 - Assignment chain verification (USPTO assignment search)
 - Jurisdiction coverage check
 - Legal status audit
