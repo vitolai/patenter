@@ -206,6 +206,9 @@ def fetch_all_xhr_pages(query, date_from="", date_to="", max_pages=10, inventor=
         for c in cluster:
             for item in c.get("result", []):
                 p = item.get("patent", {})
+                # NOTE (issue #3): country_status lists PCT designations, NOT national-phase entries.
+                # A WO/PCT designation does not mean active protection in that country;
+                # the 30/31-month national-phase deadline from priority date is the real gate.
                 countries = [cs.get("country_code") for cs in p.get("family_metadata", {}).get("aggregated", {}).get("country_status", [])]
                 all_patents.append({
                     "title": p.get("title", "").strip(),
