@@ -14,9 +14,11 @@ Usage:
 """
 
 import argparse
+import random
 import sys
 import re
 import json
+import time
 from pathlib import Path
 from urllib.parse import quote_plus
 
@@ -161,37 +163,83 @@ def render_jinja2(template_name, context, output_path=None):
         print(f"✅ Rendered: {output_path}")
     return rendered
 
-def fetch_xhr_page(query, date_from="", date_to="", page=0, inventor=""):
+def fetch_xhr_page(query, date_from="", date_to="", page=0, inventor="", max_retries=5, base_delay=2.0):
     """Fetch one page of Google Patents xhr JSON results (Mode A pagination).
 
-    Returns parsed JSON dict. Requires requests library or falls back to urllib.
+    Hardened for transient 503/429 throttling: realistic browser headers,
+    exponential back-off with jitter, and Retry-After honoring. URL
+    double-encoding is intentional — the inner query (q=...&country=...)
+    is encoded once, then the whole url= value is encoded again (see
+    references/fetching-google-patents.md Pitfall 1).
+
+    Returns parsed JSON dict. Falls back to empty result after retries.
     """
     import urllib.request
+    import urllib.error
 
     url = google_patents_xhr_url(query, "", date_from, date_to, "", page, inventor)
     headers = {
-        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'application/json, text/plain, */*',
+        # Windows Chrome UA reduces bot-filtering vs default urllib/python UA
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Accept': 'application/json, text/javascript, */*; q=0.01',
+        'Accept-Language': 'en-US,en;q=0.9',
         'Referer': 'https://patents.google.com/',
     }
-    req = urllib.request.Request(url, headers=headers)
-    try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            return json.loads(resp.read())
-    except Exception as e:
-        print(f"⚠️ xhr fetch failed (page {page}): {e}")
-        return {"results": {"total_num_results": 0, "cluster": []}}
+    for attempt in range(max_retries):
+        req = urllib.request.Request(url, headers=headers, method="GET")
+        try:
+            with urllib.request.urlopen(req, timeout=20) as resp:
+                status = getattr(resp, 'status', 200)
+                if status == 200:
+                    return json.loads(resp.read())
+                raise urllib.error.HTTPError(url, status, getattr(resp, 'reason', ''), resp.headers, None)
+        except urllib.error.HTTPError as e:
+            # Honor Retry-After header when present (seconds)
+            retry_after = None
+            try:
+                ra = e.headers.get("Retry-After") if e.headers else None
+                if ra is not None:
+                    retry_after = int(ra.strip())
+            except Exception:
+                retry_after = None
+            retryable = e.code in (429, 500, 502, 503, 504)
+            if retryable and attempt < max_retries - 1:
+                if retry_after is not None:
+                    sleep_s = retry_after + random.uniform(0, 0.5)
+                else:
+                    sleep_s = base_delay * (2 ** attempt) + random.uniform(0, 1.0)
+                print(f"⚠️ xhr  {e.code} on page {page} attempt {attempt+1}/{max_retries} — retry in {sleep_s:.1f}s")
+                time.sleep(sleep_s)
+                continue
+            print(f"⚠️ xhr fetch failed (page {page}): HTTP {e.code} {e.reason}")
+            return {"results": {"total_num_results": 0, "cluster": []}}
+        except urllib.error.URLError as e:
+            if attempt < max_retries - 1:
+                sleep_s = base_delay * (2 ** attempt) + random.uniform(0, 1.0)
+                print(f"⚠️ xhr URLError on page {page} attempt {attempt+1}/{max_retries}: {e} — retry in {sleep_s:.1f}s")
+                time.sleep(sleep_s)
+                continue
+            print(f"⚠️ xhr fetch failed (page {page}): {e}")
+            return {"results": {"total_num_results": 0, "cluster": []}}
+        except Exception as e:
+            print(f"⚠️ xhr fetch failed (page {page}): {e}")
+            return {"results": {"total_num_results": 0, "cluster": []}}
+    return {"results": {"total_num_results": 0, "cluster": []}}
 
 def fetch_all_xhr_pages(query, date_from="", date_to="", max_pages=10, inventor=""):
     """Fetch multiple pages of Google Patents xhr results.
 
-    Returns list of patent dicts with total count.
+    Returns list of patent dicts with total count. Sequential with polite
+    rate-limiting (1s + jitter) between pages to avoid burst throttling.
     """
     all_patents = []
     total = 0
     total_pages = 0
 
     for page in range(max_pages):
+        if page > 0:
+            # Polite inter-request delay with jitter (avoids hidden burst limits)
+            time.sleep(1.0 + random.uniform(0, 0.5))
         data = fetch_xhr_page(query, date_from, date_to, page, inventor)
         results = data.get("results", {})
         if page == 0:
