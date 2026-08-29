@@ -122,12 +122,22 @@ Core/foundational patent identification:
 - Distinctiveness scoring (0-13 scale across 4 dimensions)
 - Top applicants' newest patents in the field
 
+> **PCT guardrail:** Google Patents `country_status` lists *designated* states, not
+> *entered* national phases. Do not rank importance by country-status breadth
+> alone; verify national-phase entry against EPO/USPTO/CNIPA and account for
+> 30/31-month deadlines. See `references/pct-national-phase.md`.
+
 ### 5. portfolio-study
 Portfolio health assessment via triage matrix:
 - Vitality: active / dormant / expired
 - Coverage gaps: unprotected innovation areas
 - Risk exposure: FTO threats
 - Filing velocity, tech-area distribution, maintenance cost analysis
+
+> **PCT guardrail:** Google Patents `country_status` lists *designated* states, not
+> *entered* national phases. Distinguish designated vs entered jurisdictions and
+> account for 30/31-month national-phase deadlines when assessing geographic
+> coverage. See `references/pct-national-phase.md`.
 
 ### 6. portfolio-comparison
 Side-by-side multi-portfolio comparison:

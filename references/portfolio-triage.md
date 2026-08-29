@@ -28,6 +28,25 @@
 | Feature B | H01L 21/00 | 0 patents | YES — GAP |
 | Feature C | H04W 12/00 | 1 patent | Fragile — 1 patent only |
 
+### Geographic Intent — Designated vs Entered
+
+Do not confuse a patent's **designated** jurisdictions (from PCT/WO filings) with
+**entered** national phases. A WO application designates many states, but only
+those actually entered within the 30/31-month deadline from priority provide
+protection.
+
+| Patent | Priority | 31-mo EP/CN/US deadline | Status today | Entered? |
+|--------|----------|-------------------------|--------------|----------|
+| P1 | 2023-07-20 | 2026-02-20 | Passed | Verify (EPO/CNIPA/USPTO) |
+| P2 | 2024-07-19 | 2027-02-19 | Open (~6 mo) | Pending |
+
+- **Designated** = listed in the family's `country_status`; NOT protected.
+- **Entered** = national phase actually filed; protected.
+- Flag lapsed/expired entry windows as **coverage gaps**, not protected markets.
+- Verify actual entry against EPO Register, CNIPA, USPTO PAIR, WIPO PatentScope.
+
+See `references/pct-national-phase.md` for the full methodology.
+
 ### Gap Severity
 - **Critical**: Core product feature with no coverage
 - **High**: Core feature with single-patent coverage (fragile)
