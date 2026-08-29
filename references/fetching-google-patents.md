@@ -55,3 +55,31 @@ founders with OR to catch the whole portfolio.
 > `assignee` facet as evidence of no IP. Always cross-check with an
 > `inventor:"<founder>"` sweep before concluding a company has no patents in
 > a field.
+
+## Pitfall 4: claim-text fallback via FreePatentsOnline
+
+When the `xhr` endpoint is rate-limited (503 / empty responses) or the detail
+endpoint returns 404, and you need **claim text** (e.g. for independent-claim
+scope comparison), fetch claims from **FreePatentsOnline** instead.
+
+**URL pattern (US pre-grant publications):**
+```
+https://www.freepatentsonline.com/y<YYYY>/<NNNNNNN>.html
+```
+- `US20250029669A1` → `https://www.freepatentsonline.com/y2025/0029669.html`
+- `US20250123802A1` → `https://www.freepatentsonline.com/y2025/0123802.html`
+
+**Parsing the independent claim (claim 1):**
+- The page contains `1. <claim-text>...</claim-text>`.
+- Extract claim 1 with: `re.search(r'1\.\s*<claim-text>(.*?)</claim-text>', html, re.S)`
+- Strip HTML tags and collapse whitespace.
+
+**Headers:** send a realistic `User-Agent`; add `Accept: text/html` and retry
+with backoff (rate-limited intermittently).
+
+**Limitation:** WO/PCT publications are **not** indexed on FreePatentsOnline's
+US-pre-grant pages. For those, use **Espacenet / WIPO PatentScope** to retrieve
+claims.
+
+**Fallback order for claim text:** Google Patents xhr → FreePatentsOnline (US
+pre-grant) → Espacenet / WIPO (WO/PCT).
