@@ -15,6 +15,28 @@ Wraps the raw xhr endpoint with:
   detail/claims fetch still completes (fail-open, not fail-hard).
 - **Consistent headers** — browser-like User-Agent + Referer to avoid blocks.
 
+### USPTO PDF fallback (US patents only)
+
+When Google Patents has no PDF link (recent publications not yet indexed,
+page-scrape blocked), `uspto_pdf_url` / `fetch_uspto_pdf` pull the full-text
+PDF straight from the USPTO image server:
+
+```python
+import sys; sys.path.insert(0, "scripts")
+from patenter_ext.google_patents import uspto_pdf_url, fetch_uspto_pdf
+
+uspto_pdf_url("US20260349174A1")
+# -> https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20260349174
+path = fetch_uspto_pdf("US20260349174A1", "/tmp/US20260349174A1.pdf")
+```
+
+Notes:
+- US publications/grants only — returns `None` for non-US identifiers.
+- Uses plain urllib (HTTP/1.1); other clients hit HTTP/2 stream resets
+  against this endpoint, so force HTTP/1.1 if reimplementing with curl.
+- Validates `%PDF` magic + trailing `%%EOF`; fail-open (`None` on failure).
+- Same retry/backoff constants as the xhr path; stdlib only, no new deps.
+
 ### Usage
 ```python
 import sys; sys.path.insert(0, "scripts")

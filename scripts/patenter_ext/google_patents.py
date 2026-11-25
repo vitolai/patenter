@@ -8,9 +8,16 @@ source of truth for URL construction (mirrors patenter.py's builders).
 
 from __future__ import annotations
 
+import re
+import time
+import urllib.request
+from pathlib import Path as _Path
 from urllib.parse import quote_plus
 
-from modules.cache import ResponseCache, fetch_json, dedup_patents
+try:
+    from modules.cache import ResponseCache, fetch_json, dedup_patents, USER_AGENT, MAX_RETRIES, RETRY_BASE_SECONDS
+except ImportError:  # in-repo layout (scripts/ on sys.path)
+    from patenter_ext.cache import ResponseCache, fetch_json, dedup_patents, USER_AGENT, MAX_RETRIES, RETRY_BASE_SECONDS
 
 
 def google_patents_xhr_url(query: str, jurisdiction: str = "",
@@ -35,6 +42,58 @@ def google_patents_detail_xhr_url(patent_id: str) -> str:
     if pid.endswith("/en"):
         pid = pid[:-3]
     return f"https://patents.google.com/xhr/patent/{pid}/en"
+
+
+USPTO_PDF_BASE = "https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf"
+
+
+def uspto_pdf_url(pub_number: str) -> str | None:
+    """Direct USPTO full-text PDF URL. US publications/grants ONLY.
+
+    Returns None for non-US identifiers (this endpoint serves USPTO
+    documents only). Normalizes "US20260349174A1" / "US12422726B2" /
+    "patent/US20260349174A1/en" to the bare numeric portion.
+    """
+    token = pub_number.split()[0].replace("patent/", "").strip("/").upper().split("/")[0]
+    if not token.startswith("US"):
+        return None
+    body = token[2:]
+    # strip kind code suffix (A1, A9, B1, B2, ...) so its digit does not
+    # leak into the numeric portion, e.g. US20260349174A1 -> 20260349174
+    body = re.sub(r"[A-Z]+\d*$", "", body)
+    digits = re.sub(r"\D", "", body)
+    if not digits:
+        return None
+    return f"{USPTO_PDF_BASE}/{digits}"
+
+
+def fetch_uspto_pdf(pub_number, dest, timeout=120, max_retries=MAX_RETRIES):
+    import random
+    url = uspto_pdf_url(pub_number)
+    if url is None:
+        print(f"  USPTO PDF fetch skipped (non-US identifier): {pub_number}")
+        return None
+    dest = _Path(dest)
+    last_err = None
+    for attempt in range(max_retries):
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "application/pdf,*/*"})
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                data = resp.read()
+            if not data.startswith(b"%PDF"):
+                raise ValueError("response is not a PDF")
+            if b"%%EOF" not in data[-64:]:
+                raise ValueError("truncated PDF (missing %%EOF)")
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(data)
+            return str(dest)
+        except Exception as e:
+            last_err = e
+            if attempt < max_retries - 1:
+                time.sleep(RETRY_BASE_SECONDS * (2 ** attempt) + random.uniform(0, 0.5))
+    print(f"  USPTO PDF fetch failed for {pub_number}: {last_err}")
+    return None
+
 
 
 def fetch_patents(query: str, date_from: str = "", date_to: str = "",

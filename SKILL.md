@@ -170,7 +170,7 @@ Additional capability modules bundled under `scripts/patenter_ext/`:
 | `design_around.py` | **Claim-gap & design-around analysis** — parse independent claims into elements, classify kind (structural/functional/quantifiable/mixed), flag unclaimed white-space dimensions, generate Omit/Replace/Reorganize/Combine alternatives |
 | `watch_brief.py` | **Competitor IP watch** — delta detection vs prior run, HTML/MD brief generation, persistent state (cron-friendly) |
 | `docx_export.py` | **DOCX export** — export report context (JSON) to a formatted `.docx` memo |
-| `google_patents.py` | **Fetch hardening** — robust Google Patents xhr fetch with retries, dedup, page-scrape fallback (detail endpoint rate-limit 503 handling) |
+| `google_patents.py` | **Fetch hardening** — robust Google Patents xhr fetch with retries, dedup, page-scrape fallback (detail endpoint rate-limit 503 handling) + USPTO direct-PDF fallback for US patents |
 | `cache.py` | **Fetch hardening** — SQLite/FTS5 cache for fetched patents + embeddings (avoids re-fetch/re-embed per run) |
 | `bigquery_patents.py` | **BigQuery** — optional bulk landscape queries over Google Patents Public Datasets (requires GCP credentials); graceful no-op if absent |
 
